@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 from skimage import transform
 from skimage.feature import match_template
 
@@ -6,7 +6,7 @@ from skimage.feature import match_template
 def template_correlate(image,template):
     """ finds the location in pixels of the template in the image"""
     score = match_template(image, template)
-    ij = numpy.unravel_index(numpy.argmax(score), score.shape)
+    ij = np.unravel_index(np.argmax(score), score.shape)
     x, y = ij[::-1]
     return x,y
     
@@ -23,9 +23,9 @@ def extract_gray_patches(image,windows,pad=0):
         rows[rows<0] = 0; rows[rows>max_rows] = max_rows
         cols[cols<0] = 0; cols[cols>max_cols] = max_cols
         patches.append(image[rows[0]:rows[1],cols[0]:cols[1],1])
-        coords.append(numpy.vstack((rows,cols)).T)
+        coords.append(np.vstack((rows,cols)).T)
     if pad > 0:    
-        return patches,numpy.vstack(coords)
+        return patches,np.vstack(coords)
     else:
         return patches
         
@@ -42,7 +42,7 @@ class ImageMatcher(object):
     def match(self, image):
         # extract patches and compute phase correlation        
         search_windows,search_coords = extract_gray_patches(image,self.windows,pad=self.pad)
-        shifts = numpy.vstack([template_correlate(window,template) for window,template in zip(search_windows,self.templates)])
+        shifts = np.vstack([template_correlate(window,template) for window,template in zip(search_windows,self.templates)])
         # extract top left of window
         delta = search_coords[::2,[1,0]]-self.windows[::2,[1,0]]
         points1 = self.windows[::2,[1,0]] #+self.windows[1::2,:])[:,[1,0]]/2.0    

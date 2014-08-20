@@ -1,19 +1,30 @@
 import multiprocessing as mp
+from skimage import io, img_as_float, img_as_ubyte
 
 
-def transform_worker(matcher,image_queue,transformed_queue):
-    """ processes the images from the queue, one at a time """
-    images = 0    
+def save_image(image,filename):
+    """ saves the image to the given filename, ensuring reasonable range"""
+     # clamp out of range colours
+    im = io.imsave(img_as_ubyte(image))
+    im.save(filename)
+    
+
+def load_image(filename):
+    return img_as_float(io.imread(filename))
+    
+
+def _transform_worker(matcher,image_queue,transformed_queue):
+    """ Worker function for multiprocessing image synthesis. """
     for image in iter(image_queue.get,'STOP'):
-        if images == 0:
-            acc = matcher(image)
-            images += 1
-        else:
+        image = load_image(image)
+        try:
             acc += matcher(image)
+        except NameError:
+            acc = matcher(image)            
     transformed_queue.put(acc)
 
 
-def process_images(matcher,image_list,filename=None,n_workers=0):
+def process_images(matcher,image_list,n_workers=2):
     """ Processes the images in image list, using matcher, in a parallel fashion."""
     image_queue = mp.Queue()
     accumulate_queue = mp.Queue()
@@ -27,13 +38,13 @@ def process_images(matcher,image_list,filename=None,n_workers=0):
     processes = []
     # start a series of workers for each process
     for i in range(n_workers):
-        p = mp.Process(target=transform_worker,args=(matcher,image_queue,accumulate_queue))
+        p = mp.Process(target=_transform_worker,args=(matcher,image_queue,accumulate_queue))
         p.start()
         processes.append(p)
         image_queue.put('STOP')
     
     procs_done = 0
-    acc = numpy.asarray(Image.open(image_list[0]),dtype='float32')/255.
+    acc = load_image(image)
     for accumulated in iter(accumulate_queue.get,'DUMMY'):
         acc += accumulated
         procs_done += 1
@@ -44,4 +55,29 @@ def process_images(matcher,image_list,filename=None,n_workers=0):
     for p in processes: 
         p.join()
     acc /= len(image_list)
-    return acc        
+    return acc     
+    
+
+if __name__ == "__main__":
+    from glob import glob
+    from register import ImageMatcher
+    from gui import get_windows
+    import matplotlib.pyplot as plt
+    
+    images = glob('/home/sam/photos/computational/bulkregister/P106041*')
+    
+    base = load_image(images[0])
+    
+    windows = get_windows(base)
+    matcher = ImageMatcher(windows,base)
+    
+    output = process_images(matcher, images)
+    
+    plt.imshow(output)
+    plt.show()
+    
+    
+    
+    
+    
+    
