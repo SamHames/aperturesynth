@@ -3,27 +3,46 @@ from skimage import io, img_as_float, img_as_ubyte
 
 
 def save_image(image, filename):
-    """ saves the image to the given filename, ensuring reasonable range"""
-    io.imsave(img_as_ubyte(image))
+    """Saves the image to the given filename, ensuring unit8 output. """
+    io.imsave(filename, img_as_ubyte(image))
 
 
 def load_image(filename):
+    """Loads the given image file to a floating point ndarray. """
     return img_as_float(io.imread(filename))
 
 
 def _transform_worker(matcher, image_queue, transformed_queue):
-    """ Worker function for multiprocessing image synthesis. """
+    """Worker function for multiprocessing image synthesis. """
     for image in iter(image_queue.get, 'STOP'):
         image = load_image(image)
         try:
             acc += matcher(image)
         except NameError:
             acc = matcher(image)
-        transformed_queue.put(acc)
+    transformed_queue.put(acc)
 
 
 def process_images(matcher, image_list, n_workers=2):
-    """ Processes the images in image list, using matcher, in a parallel fashion."""
+    """Apply the given transformation to a list of images.
+    
+    Parameters
+    ----------
+    
+    matcher: callable
+        Transforms an input array to match the desired baseline image.
+    image_list: list of filepaths
+        Locations of images to be loaded and transformed. 
+    n_workers: int (default=2)
+        Number of worker processes to use in parallel.
+        
+    Returns
+    -------
+    
+    accumulated_image: MxNx[3]
+        The registered image as an ndarray. 
+        
+    """
     image_queue = mp.Queue()
     accumulate_queue = mp.Queue()
 
@@ -49,8 +68,6 @@ def process_images(matcher, image_list, n_workers=2):
         procs_done += 1
         if procs_done == n_workers:
             break
-    # finish everything off
-    print("Terminating processes")
     for p in processes:
         p.join()
     acc /= len(image_list)
