@@ -1,30 +1,32 @@
 import multiprocessing as mp
-from skimage import io, img_as_float, img_as_ubyte
+from skimage import io, img_as_ubyte, img_as_float
 
 
 def save_image(image, filename):
-    """Saves the image to the given filename, ensuring unit8 output. """
+    """Saves the image to the given filename, ensuring uint8 output. """
     io.imsave(filename, img_as_ubyte(image))
+    
+
+def load_image(image):
+    """Saves the image to the given filename, ensuring uint8 output. """
+    return img_as_float(io.imread(image)).astype('float32')
 
 
-def load_image(filename):
-    """Loads the given image file to a floating point ndarray. """
-    return img_as_float(io.imread(filename))
-
-
-def _transform_worker(matcher, image_queue, transformed_queue):
+def _transform_worker(registrator, image_queue, transformed_queue):
     """Worker function for multiprocessing image synthesis. """
+    init = False
     for image in iter(image_queue.get, 'STOP'):
         image = load_image(image)
-        try:
-            acc += matcher(image)[0]
-        except NameError:
-            acc = matcher(image)[0]
+        if init:
+            acc += registrator(image)[0]
+        else:
+            acc = registrator(image)[0]
+            init = True
     transformed_queue.put(acc)
 
 
-def process_images(matcher, image_list, n_workers=2):
-    """Apply the given transformation to a list of images.
+def process_images(image_list, windows, n_jobs=4):
+    """Apply the given transformation to each listed image and find the mean.
     
     Parameters
     ----------
@@ -43,53 +45,57 @@ def process_images(matcher, image_list, n_workers=2):
         The registered image as an ndarray. 
         
     """
-    image_queue = mp.Queue()
-    accumulate_queue = mp.Queue()
+    # Set up the object to perform the image registration
+    baseline = load_image(image_list[0])
+    registrator = Registrator(windows, baseline, pad=400)
+    
+    # Be nice - use half the machine reported cores if n_jobs is not specified.
+    if n_jobs == 0:
+        n_jobs = int(mp.cpu_count()/2)
+        
+    if n_jobs == 1:
+        for image in image_list[1:]:
+            image = load_image(image)
+            baseline += registrator(image)[0]
+    else:
+        image_queue = mp.Queue()
+        transformed_queue = mp.Queue()
+    
+        for image in image_list[1:]:
+            image_queue.put(image)
+    
+        processes = []
+        for i in range(n_jobs):
+            p = mp.Process(target=_transform_worker,
+                           args=(registrator, image_queue, transformed_queue))
+            p.start()
+            processes.append(p)
+            image_queue.put('STOP')
+    
+        jobs_done = 0
+        for transformed in iter(transformed_queue.get, 'DUMMY'):
+            baseline += transformed
+            jobs_done += 1
+            if jobs_done == n_jobs:
+                break
 
-    for image in image_list[1:]:
-        image_queue.put(image)
-
-    if n_workers == 0:
-        n_workers = int(mp.cpu_count()/2)  # Hack to account for hyperthreading, and also not consume all available resources
-
-    processes = []
-    # start a series of workers for each process
-    for i in range(n_workers):
-        p = mp.Process(target=_transform_worker,
-                       args=(matcher, image_queue, accumulate_queue))
-        p.start()
-        processes.append(p)
-        image_queue.put('STOP')
-
-    procs_done = 0
-    acc = load_image(image)
-    for accumulated in iter(accumulate_queue.get, 'DUMMY'):
-        acc += accumulated
-        procs_done += 1
-        if procs_done == n_workers:
-            break
-    for p in processes:
-        p.join()
-    acc /= len(image_list)
-    return acc
+        for p in processes:
+            p.join()
+            
+    baseline /= len(image_list)
+    return baseline
 
 
 if __name__ == "__main__":
     from glob import glob
     from register import Registrator
     from gui import get_windows
-    import matplotlib.pyplot as plt
 
     images = glob('/home/sam/photos/computational/bulkregister/P106031[5-9]*')
 
-    base = load_image(images[0])
+    windows = get_windows(load_image(images[0]))
 
-    windows = get_windows(base)
-    matcher = Registrator(windows, base, pad=400)
-
-    output = process_images(matcher, images)
+    output = process_images(images, windows)
     
     save_image(output, 'test_out.tiff')
 
-    plt.imshow(output)
-    plt.show()

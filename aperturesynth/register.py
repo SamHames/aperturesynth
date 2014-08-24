@@ -118,7 +118,7 @@ class Registrator(object):
         match_tform = transform.estimate_transform('similarity',
                                                    points2,
                                                    points1)
-        return transform.warp(image, match_tform), match_tform
+        return transform.warp(image, match_tform).astype('float32'), match_tform
 
     def __call__(self, image):
         return self.match(image)
