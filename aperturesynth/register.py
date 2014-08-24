@@ -1,18 +1,19 @@
 import numpy as np
 from skimage import transform
 from skimage.feature import match_template
+from skimage.color import rgb2gray
 
 
-def template_correlate(image, template):
+def find_max_correlation(image, template):
     """Find the location of the maximum correlation between the template and 
     the image.
 
     Parameters
     ----------
 
-    image: M,N [x3] ndarray
+    image: M, N  ndarray
         The image to search within for the template.
-    template: M,N [x3] ndarray
+    template: m, n ndarray
         The template image to search for.
     
     Returns
@@ -26,15 +27,15 @@ def template_correlate(image, template):
     return x, y
 
 
-def extract_gray_patches(image, windows, pad=0):
+def extract_patches(image, windows, pad=0):
     """Extract grayscale patches from the image at the given locations.
 
     Parameters
     ----------
 
-    image: M,N [x3] ndarray
+    image: M,N,3 ndarray
         The image to extract the windows from.
-    windows: n_windows*2 x 2 ndarray
+    windows: n_windows*2,2 ndarray
         X,Y coordinates of starting and finishing points of each rectangular
         window.
     pad: integer (default=0)
@@ -57,7 +58,8 @@ def extract_gray_patches(image, windows, pad=0):
         rows[rows > max_rows] = max_rows
         cols[cols < 0] = 0
         cols[cols > max_cols] = max_cols
-        patches.append(image[rows[0]:rows[1], cols[0]:cols[1], 1])
+        this_patch = image[rows[0]:rows[1], cols[0]:cols[1]]
+        patches.append(rgb2gray(this_patch))
         coords.append(np.vstack((rows, cols)).T)
     if pad > 0:
         return patches, np.vstack(coords)
@@ -65,7 +67,7 @@ def extract_gray_patches(image, windows, pad=0):
         return patches
 
 
-class ImageMatcher(object):
+class Registrator(object):
     """Transform a reference image to match a baseline image.
     
     Parameters
@@ -82,7 +84,7 @@ class ImageMatcher(object):
     def __init__(self, windows, base_image, pad=400):
         self.windows = windows
         self.pad = pad
-        self.templates = extract_gray_patches(base_image, windows)
+        self.templates = extract_patches(base_image, windows)
 
     def match(self, image):
         """Matches an image to the baseline image.
@@ -101,21 +103,22 @@ class ImageMatcher(object):
             selected points.
         
         """
-        search_windows, search_coords = extract_gray_patches(image,
-                                                             self.windows,
-                                                             pad=self.pad)
+        search_windows, search_coords = extract_patches(image,
+                                                        self.windows,
+                                                        pad=self.pad)
         shifts = []
         for window, template in zip(search_windows, self.templates):
-            shifts.append(template_correlate(window, template))
+            shifts.append(find_max_correlation(window, template))
         shifts = np.vstack(shifts)
         # Convert coordinates from padded windows to absolute position
         delta = search_coords[::2, [1, 0]] - self.windows[::2, [1, 0]]
         points1 = self.windows[::2, [1, 0]]
         points2 = points1 - shifts - delta
+        
         match_tform = transform.estimate_transform('similarity',
                                                    points2,
                                                    points1)
-        return transform.warp(image, match_tform)
+        return transform.warp(image, match_tform), match_tform
 
     def __call__(self, image):
         return self.match(image)

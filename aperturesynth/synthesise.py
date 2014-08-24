@@ -17,9 +17,9 @@ def _transform_worker(matcher, image_queue, transformed_queue):
     for image in iter(image_queue.get, 'STOP'):
         image = load_image(image)
         try:
-            acc += matcher(image)
+            acc += matcher(image)[0]
         except NameError:
-            acc = matcher(image)
+            acc = matcher(image)[0]
     transformed_queue.put(acc)
 
 
@@ -76,18 +76,20 @@ def process_images(matcher, image_list, n_workers=2):
 
 if __name__ == "__main__":
     from glob import glob
-    from register import ImageMatcher
+    from register import Registrator
     from gui import get_windows
     import matplotlib.pyplot as plt
 
-    images = glob('/home/sam/photos/computational/bulkregister/P106041*')
+    images = glob('/home/sam/photos/computational/bulkregister/P106031[5-9]*')
 
     base = load_image(images[0])
 
     windows = get_windows(base)
-    matcher = ImageMatcher(windows, base)
+    matcher = Registrator(windows, base, pad=400)
 
     output = process_images(matcher, images)
+    
+    save_image(output, 'test_out.tiff')
 
     plt.imshow(output)
     plt.show()
