@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+"""aperturesynth - a tool for registering and combining series of photographs.
+
+Usage:
+    aperturesynth (--out=OUTPUT) <images>...
+  
+Options:
+    -h --help        Show this screen.
+"""
+
+from aperturesynth.synthesise import main
+import docopt
+
+args = docopt.docopt(__doc__)
+print(args)
+images = args['<images>']
+output_file = args['--out']
+main(images, output_file)

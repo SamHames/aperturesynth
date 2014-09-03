@@ -1,5 +1,9 @@
+
+
 import multiprocessing as mp
 from skimage import io, img_as_ubyte, img_as_float
+from register import Registrator
+from gui import get_windows
 
 
 def save_image(image, filename):
@@ -85,17 +89,13 @@ def process_images(image_list, windows, n_jobs=4):
     baseline /= len(image_list)
     return baseline
 
-
-if __name__ == "__main__":
-    from glob import glob
-    from register import Registrator
-    from gui import get_windows
-
-    images = glob('/home/sam/photos/computational/bulkregister/P106031[5-9]*')
-
-    windows = get_windows(load_image(images[0]))
-
-    output = process_images(images, windows)
+def main(image_list, output_file):
+    """Registers and transforms each input image and saves the result."""
     
-    save_image(output, 'test_out.tiff')
+    windows = get_windows(load_image(image_list[0]))
 
+    output = process_images(image_list, windows)
+    
+    # Start here: work out how to handle the output images nicely.
+    # Split the filename up- grab the last part, prepend with combined.
+    save_image(output, output_file)
