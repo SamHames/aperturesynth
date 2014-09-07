@@ -1,9 +1,20 @@
+#!/usr/bin/env python
+"""aperturesynth - a tool for registering and combining series of photographs.
 
+Usage:
+    aperturesynth (--out=OUTPUT) <images>...
+  
+Options:
+    -h --help        Show this screen.
+"""
 
 import multiprocessing as mp
 from skimage import io, img_as_ubyte, img_as_float
-from register import Registrator
-from gui import get_windows
+from docopt import docopt
+
+from .register import Registrator
+from .gui import get_windows
+
 
 
 def save_image(image, filename):
@@ -29,7 +40,7 @@ def _transform_worker(registrator, image_queue, transformed_queue):
     transformed_queue.put(acc)
 
 
-def process_images(image_list, windows, n_jobs=4):
+def process_images(image_list, windows, n_jobs=2):
     """Apply the given transformation to each listed image and find the mean.
     
     Parameters
@@ -89,13 +100,14 @@ def process_images(image_list, windows, n_jobs=4):
     baseline /= len(image_list)
     return baseline
 
-def main(image_list, output_file):
+def main():
     """Registers and transforms each input image and saves the result."""
+    args = docopt(__doc__)
+    images = args['<images>']
+    output_file = args['--out']
     
-    windows = get_windows(load_image(image_list[0]))
+    windows = get_windows(load_image(images[0]))
 
-    output = process_images(image_list, windows)
-    
-    # Start here: work out how to handle the output images nicely.
-    # Split the filename up- grab the last part, prepend with combined.
+    output = process_images(images, windows)
+
     save_image(output, output_file)
