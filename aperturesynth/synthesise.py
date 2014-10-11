@@ -1,20 +1,22 @@
-#!/usr/bin/env python
 """aperturesynth - a tool for registering and combining series of photographs.
 
 Usage:
-    aperturesynth (--out=OUTPUT) <images>...
+    aperturesynth [-n] <images>...
   
 Options:
     -h --help        Show this screen.
+    --out=OUTPUT     Optional output file.
+    -n           Combine images without transforming
 """
+
 
 import multiprocessing as mp
 from skimage import io, img_as_ubyte, img_as_float
 from docopt import docopt
+import os.path
 
 from .register import Registrator
 from .gui import get_windows
-
 
 
 def save_image(image, filename):
@@ -40,7 +42,7 @@ def _transform_worker(registrator, image_queue, transformed_queue):
     transformed_queue.put(acc)
 
 
-def process_images(image_list, windows, n_jobs=2):
+def process_images(image_list, windows, n_jobs=3, no_transform=False):
     """Apply the given transformation to each listed image and find the mean.
     
     Parameters
@@ -60,54 +62,70 @@ def process_images(image_list, windows, n_jobs=2):
         The registered image as an ndarray. 
         
     """
-    # Set up the object to perform the image registration
-    baseline = load_image(image_list[0])
-    registrator = Registrator(windows, baseline, pad=400)
-    
-    # Be nice - use half the machine reported cores if n_jobs is not specified.
-    if n_jobs == 0:
-        n_jobs = int(mp.cpu_count()/2)
+    if no_transform:
+        baseline = load_image(image_list[0])
+        for image in image_list[1:]:
+            baseline += load_image(image)
+    else:        
+        # Set up the object to perform the image registration
+        baseline = load_image(image_list[0])
+        registrator = Registrator(windows, baseline, pad=400)
         
-    if n_jobs == 1:
-        for image in image_list[1:]:
-            image = load_image(image)
-            baseline += registrator(image)[0]
-    else:
-        image_queue = mp.Queue()
-        transformed_queue = mp.Queue()
+        # Be nice - use half the machine reported cores if n_jobs is not specified.
+        if n_jobs == 0:
+            n_jobs = int(mp.cpu_count()/2)
+            
+        if n_jobs == 1:
+            for image in image_list[1:]:
+                image = load_image(image)
+                baseline += registrator(image)[0]
+        else:
+            image_queue = mp.Queue()
+            transformed_queue = mp.Queue()
+        
+            for image in image_list[1:]:
+                image_queue.put(image)
+        
+            processes = []
+            for i in range(n_jobs):
+                p = mp.Process(target=_transform_worker,
+                               args=(registrator, image_queue, transformed_queue))
+                p.start()
+                processes.append(p)
+                image_queue.put('STOP')
+        
+            jobs_done = 0
+            for transformed in iter(transformed_queue.get, 'DUMMY'):
+                baseline += transformed
+                jobs_done += 1
+                if jobs_done == n_jobs:
+                    break
     
-        for image in image_list[1:]:
-            image_queue.put(image)
-    
-        processes = []
-        for i in range(n_jobs):
-            p = mp.Process(target=_transform_worker,
-                           args=(registrator, image_queue, transformed_queue))
-            p.start()
-            processes.append(p)
-            image_queue.put('STOP')
-    
-        jobs_done = 0
-        for transformed in iter(transformed_queue.get, 'DUMMY'):
-            baseline += transformed
-            jobs_done += 1
-            if jobs_done == n_jobs:
-                break
-
-        for p in processes:
-            p.join()
+            for p in processes:
+                p.join()
             
     baseline /= len(image_list)
     return baseline
+
 
 def main():
     """Registers and transforms each input image and saves the result."""
     args = docopt(__doc__)
     images = args['<images>']
-    output_file = args['--out']
     
-    windows = get_windows(load_image(images[0]))
-
-    output = process_images(images, windows)
-
-    save_image(output, output_file)
+    if '--out' in args:
+        output_file = args['--out']
+    else:
+        head, ext = os.path.splitext(images[0])  
+        head, tail = os.path.split(head)
+        output_file = os.path.join(head,'transformed_' + tail + '.tiff')
+    
+    if args['-n']:
+        windows = []
+        output = process_images(images, windows, no_transform=True)
+        save_image(output, output_file)
+        
+    else:
+        windows = get_windows(load_image(images[0])) 
+        output = process_images(images, windows)
+        save_image(output, output_file)
