@@ -42,7 +42,7 @@ def _transform_worker(registrator, image_queue, transformed_queue):
     transformed_queue.put(acc)
 
 
-def process_images(image_list, windows, n_jobs=3, no_transform=False):
+def process_images(image_list, windows, n_jobs=1, no_transform=False):
     """Apply the given transformation to each listed image and find the mean.
     
     Parameters
