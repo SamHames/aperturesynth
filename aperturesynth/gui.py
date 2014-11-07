@@ -8,13 +8,13 @@ def get_windows(image):
     Parameters
     ----------
 
-    image : NxMx3 ndarray
+    image : M,N,3 ndarray
         The image to be displayed.
 
     Returns
     -------
 
-    array : n_points x 2
+    array : n_points,2
         An array of coordinates in the image. Each row corresponds to the x, y
         coordinates of one point. If an odd number of points are specified, the
         last one will be discarded.

@@ -12,9 +12,10 @@ def find_max_correlation(image, template):
     ----------
 
     image: M, N  ndarray
-        The image to search within for the template.
+        The image to search within for the template. Colour images must first
+        be converted to a channel.
     template: m, n ndarray
-        The template image to search for.
+        The template image to search for. Must be single channel.
 
     Returns
     -------
@@ -34,12 +35,12 @@ def extract_patches(image, windows, pad=0):
     ----------
 
     image: M,N,3 ndarray
-        The image to extract the windows from.
+        The three channel image to extract the windows from.
     windows: n_windows*2,2 ndarray
         X,Y coordinates of starting and finishing points of each rectangular
         window.
     pad: integer (default=0)
-        The amount to pad the window size from the given locations
+        The amount to pad the window size from the given locations.
 
     Returns
     -------
@@ -73,12 +74,13 @@ class Registrator(object):
     Parameters
     ----------
 
-    windows: (n_windows*2) x 2 array
+    windows: (n_windows*2),2 ndarray
         x,y coordinates for focal points.
-    base_image: MxNx[3] ndarray
-        Baseline image array to match other images to.
+    base_image: M,N,3 ndarray
+        Baseline image to match other images to.
     pad: integer (default=400)
-        Size of padding to apply to search space in images to be matched.
+        Size of search space outside the defined window in images to be
+        registered.
 
     """
     def __init__(self, windows, base_image, pad=400):
@@ -92,13 +94,13 @@ class Registrator(object):
         Parameters
         ----------
 
-        image: NxMx[3] ndarray
+        image: M,N,3 ndarray
             Image to be matched.
 
         Returns
         -------
 
-        transformed_image: NxMx[3] ndarray
+        transformed_image: M,N,3 ndarray
             The input image transformed to match the baseline image at the
             selected points.
 

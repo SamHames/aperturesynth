@@ -25,7 +25,7 @@ def save_image(image, filename):
 
 
 def load_image(image):
-    """Saves the image to the given filename, ensuring uint8 output. """
+    """Loads the given file and converts to float32 format. """
     return img_as_float(io.imread(image)).astype('float32')
 
 
@@ -48,18 +48,21 @@ def process_images(image_list, windows, n_jobs=1, no_transform=False):
     Parameters
     ----------
 
-    matcher: callable
-        Transforms an input array to match the desired baseline image.
     image_list: list of filepaths
         Locations of images to be loaded and transformed.
-    n_workers: int (default=2)
+    windows:
+    n_jobs: int (default 1)
         Number of worker processes to use in parallel.
+    no_transform: bool (default False)
+        If true, combine images without registering them first. The windows
+        variable will be ignored. Useful for visualising the impact of the
+        registration process.
 
     Returns
     -------
 
-    accumulated_image: MxNx[3]
-        The registered image as an ndarray.
+    image: MxNx[3]
+        The combined image as an ndarray.
 
     """
     if no_transform:
@@ -70,10 +73,6 @@ def process_images(image_list, windows, n_jobs=1, no_transform=False):
         # Set up the object to perform the image registration
         baseline = load_image(image_list[0])
         registrator = Registrator(windows, baseline, pad=400)
-
-        # Be nice - use half the machine reported cores if n_jobs is none
-        if n_jobs == 0:
-            n_jobs = int(mp.cpu_count()/2)
 
         if n_jobs == 1:
             for image in image_list[1:]:
