@@ -5,7 +5,7 @@ from skimage.color import rgb2gray
 
 
 def find_max_correlation(image, template):
-    """Find the location of the maximum correlation between the template and 
+    """Find the location of the maximum correlation between the template and
     the image.
 
     Parameters
@@ -15,7 +15,7 @@ def find_max_correlation(image, template):
         The image to search within for the template.
     template: m, n ndarray
         The template image to search for.
-    
+
     Returns
     -------
     (x,y): tuple of x and y coordinates in the image.
@@ -45,7 +45,7 @@ def extract_patches(image, windows, pad=0):
     -------
     patches: list of ndarrays
         The patches extracted from the image.
-    
+
     """
     patches = []
     coords = []
@@ -69,11 +69,11 @@ def extract_patches(image, windows, pad=0):
 
 class Registrator(object):
     """Transform a reference image to match a baseline image.
-    
+
     Parameters
     ----------
-    
-    windows: (n_windows*2) x 2 array 
+
+    windows: (n_windows*2) x 2 array
         x,y coordinates for focal points.
     base_image: MxNx[3] ndarray
         Baseline image array to match other images to.
@@ -91,17 +91,17 @@ class Registrator(object):
 
         Parameters
         ----------
-        
+
         image: NxMx[3] ndarray
             Image to be matched.
-        
+
         Returns
         -------
-        
+
         transformed_image: NxMx[3] ndarray
-            The input image transformed to match the baseline image at the 
+            The input image transformed to match the baseline image at the
             selected points.
-        
+
         """
         search_windows, search_coords = extract_patches(image,
                                                         self.windows,
@@ -114,11 +114,12 @@ class Registrator(object):
         delta = search_coords[::2, [1, 0]] - self.windows[::2, [1, 0]]
         points1 = self.windows[::2, [1, 0]]
         points2 = points1 - shifts - delta
-        
+
         match_tform = transform.estimate_transform('affine',
                                                    points2,
                                                    points1)
-        return transform.warp(image, match_tform).astype('float32'), match_tform
+        return (transform.warp(image, match_tform).astype('float32'),
+                match_tform)
 
     def __call__(self, image):
         return self.match(image)
