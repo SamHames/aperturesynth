@@ -115,7 +115,7 @@ class Registrator(object):
         points1 = self.windows[::2, [1, 0]]
         points2 = points1 - shifts - delta
         
-        match_tform = transform.estimate_transform('similarity',
+        match_tform = transform.estimate_transform('affine',
                                                    points2,
                                                    points1)
         return transform.warp(image, match_tform).astype('float32'), match_tform
