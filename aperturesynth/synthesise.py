@@ -1,12 +1,19 @@
 """aperturesynth - a tool for registering and combining series of photographs.
 
 Usage:
-    aperturesynth [-n] <images>...
+    aperturesynth [--no-transform] [--out FILE] <images>...
 
 Options:
-    -h --help        Show this screen.
-    --out=OUTPUT     Optional output file.
-    -n           Combine images without transforming
+    -h --help           Show this help screen.
+    --out FILE          Optional output file. If not specified the output will
+                        be written to a tiff file with same name as the
+                        baseline image with 'transformed_' prepended.
+    --no-transform      Combine images without transforming first. Useful for
+                        visualising the impact of registration.
+
+The first image passed in will be the baseline image to which all following
+images will be matched.
+
 """
 
 
@@ -55,8 +62,8 @@ def process_images(image_list, windows, n_jobs=1, no_transform=False):
         Number of worker processes to use in parallel.
     no_transform: bool (default False)
         If true, combine images without registering them first. The windows
-        variable will be ignored. Useful for visualising the impact of the
-        registration process.
+        and n_jobs variables will be ignored. Useful for visualising the impact
+        of the registration process.
 
     Returns
     -------
@@ -112,14 +119,14 @@ def main():
     args = docopt(__doc__)
     images = args['<images>']
 
-    if '--out' in args:
+    if args['--out'] is not None:
         output_file = args['--out']
     else:
         head, ext = os.path.splitext(images[0])
         head, tail = os.path.split(head)
         output_file = os.path.join(head, 'transformed_' + tail + '.tiff')
 
-    if args['-n']:
+    if args['--no-transform']:
         windows = []
         output = process_images(images, windows, no_transform=True)
         save_image(output, output_file)
