@@ -32,7 +32,7 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         ],
-    
+
     keywords='photography processing synthesis',
 
     entry_points={'console_scripts':['aperturesynth=aperturesynth.synthesise:main']}

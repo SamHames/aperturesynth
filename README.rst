@@ -15,7 +15,7 @@ Usage
 
    ::
 
-   aperturesynth --out fused.tiff 1.png 2.png 3.png
+    aperturesynth --out fused.tiff 1.png 2.png 3.png
 
    This will fuse the 3 .png images and save the result to fused.tiff. The file 1.png will be the baseline image used to register 2 and 3.
 
