@@ -36,20 +36,7 @@ def load_image(image):
     return img_as_float(io.imread(image)).astype('float32')
 
 
-def _transform_worker(registrator, image_queue, transformed_queue):
-    """Worker function for multiprocessing image synthesis. """
-    init = False
-    for image in iter(image_queue.get, 'STOP'):
-        image = load_image(image)
-        if init:
-            acc += registrator(image)[0]
-        else:
-            acc = registrator(image)[0]
-            init = True
-    transformed_queue.put(acc)
-
-
-def process_images(image_list, windows, n_jobs=1, no_transform=False):
+def process_images(image_list, windows, no_transform=False):
     """Apply the given transformation to each listed image and find the mean.
 
     Parameters
@@ -81,34 +68,9 @@ def process_images(image_list, windows, n_jobs=1, no_transform=False):
         baseline = load_image(image_list[0])
         registrator = Registrator(windows, baseline, pad=400)
 
-        if n_jobs == 1:
-            for image in image_list[1:]:
-                image = load_image(image)
-                baseline += registrator(image)[0]
-        else:
-            image_queue = mp.Queue()
-            transformed_queue = mp.Queue()
-
-            for image in image_list[1:]:
-                image_queue.put(image)
-
-            processes = []
-            for i in range(n_jobs):
-                p = mp.Process(target=_transform_worker,
-                               args=(registrator, image_queue, transformed_queue))
-                p.start()
-                processes.append(p)
-                image_queue.put('STOP')
-
-            jobs_done = 0
-            for transformed in iter(transformed_queue.get, 'DUMMY'):
-                baseline += transformed
-                jobs_done += 1
-                if jobs_done == n_jobs:
-                    break
-
-            for p in processes:
-                p.join()
+        for image in image_list[1:]:
+            image = load_image(image)
+            baseline += registrator(image)[0]
 
     baseline /= len(image_list)
     return baseline
