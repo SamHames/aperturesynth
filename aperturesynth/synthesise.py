@@ -1,15 +1,26 @@
 """aperturesynth - a tool for registering and combining series of photographs.
 
 Usage:
-    aperturesynth combine [--no-transform] [--out FILE] <images>...
+    aperturesynth combine [--no-transform] [--out FILE] [--windows FILE] <images>...
     aperturesynth choose_windows <base_image> <window_file>
 
 Options:
+
     -h --help           Show this help screen.
+
     --out FILE          Optional output file. If not specified the output will
                         be written to a tiff file with same name as the
                         baseline image with 'transformed_' prepended. The
                         output format is chosen by the file extension.
+
+    --windows FILE      Optional file to specify the coordinates of the windows
+                        to register. This file can be generated using the
+                        choose_windows subcommand, or can be written by hand
+                        as a comma separated value file. Each row of this file
+                        is the integer x,y coordinates of a point in the image.
+                        Consecutive rows are interpreted as the top left and
+                        bottom right of each window.
+
     --no-transform      Combine images without transforming first. Useful for
                         visualising the impact of registration.
 
