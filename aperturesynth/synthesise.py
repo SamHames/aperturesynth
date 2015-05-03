@@ -1,13 +1,15 @@
 """aperturesynth - a tool for registering and combining series of photographs.
 
 Usage:
-    aperturesynth [--no-transform] [--out FILE] <images>...
+    aperturesynth combine [--no-transform] [--out FILE] <images>...
+    aperturesynth choose_windows <base_image> <window_file>
 
 Options:
     -h --help           Show this help screen.
     --out FILE          Optional output file. If not specified the output will
                         be written to a tiff file with same name as the
-                        baseline image with 'transformed_' prepended.
+                        baseline image with 'transformed_' prepended. The
+                        output format is chosen by the file extension.
     --no-transform      Combine images without transforming first. Useful for
                         visualising the impact of registration.
 
@@ -18,6 +20,7 @@ images will be matched.
 
 
 import multiprocessing as mp
+import numpy as np
 from skimage import io, img_as_ubyte, img_as_float
 from docopt import docopt
 import os.path
@@ -96,21 +99,29 @@ def process_images(image_list, registrator, fusion=None):
 def main():
     """Registers and transforms each input image and saves the result."""
     args = docopt(__doc__)
-    images = args['<images>']
 
-    if args['--out'] is not None:
-        output_file = args['--out']
+    if args['choose_windows'] is not None:
+        print(args)
+        reference = load_image(args['<base_image>'])
+        windows = get_windows(reference)
+        np.savetxt(args['<window_file>'], windows.astype('int'), fmt='%i')
+
     else:
-        head, ext = os.path.splitext(images[0])
-        head, tail = os.path.split(head)
-        output_file = os.path.join(head, 'transformed_' + tail + '.tiff')
+        images = args['<images>']
 
-    if args['--no-transform']:
-        registrator = no_transform
-    else:
-        baseline = load_image(images[0])
-        windows = get_windows(baseline)
-        registrator = Registrator(windows, baseline)
+        if args['--out'] is not None:
+            output_file = args['--out']
+        else:
+            head, ext = os.path.splitext(images[0])
+            head, tail = os.path.split(head)
+            output_file = os.path.join(head, 'transformed_' + tail + '.tiff')
 
-    output = process_images(images, registrator)
-    save_image(output, output_file)
+        if args['--no-transform']:
+            registrator = no_transform
+        else:
+            baseline = load_image(images[0])
+            windows = get_windows(baseline)
+            registrator = Registrator(windows, baseline)
+
+        output = process_images(images, registrator)
+        save_image(output, output_file)
