@@ -111,15 +111,15 @@ def main():
     """Registers and transforms each input image and saves the result."""
     args = docopt(__doc__)
 
-    if args['choose_windows'] is not None:
-        print(args)
+    if args['choose_windows']:
         reference = load_image(args['<base_image>'])
         windows = get_windows(reference)
         np.savetxt(args['<window_file>'], windows.astype('int'), fmt='%i')
 
-    else:
+    elif args['combine']:
         images = args['<images>']
 
+        # Is a file specified, or do I need to generate my own?
         if args['--out'] is not None:
             output_file = args['--out']
         else:
@@ -127,11 +127,21 @@ def main():
             head, tail = os.path.split(head)
             output_file = os.path.join(head, 'transformed_' + tail + '.tiff')
 
-        if args['--no-transform']:
-            registrator = no_transform
+        # Are the windows specified, or do I have to provide a gui to choose?
+        if args['--windows'] is not None:
+            windows = np.genfromtxt(args['--windows'])
         else:
             baseline = load_image(images[0])
             windows = get_windows(baseline)
+
+        # What kind of registration am I performing?
+        if args['--no-transform']:
+            registrator = no_transform
+        else:
+            try:
+                baseline.shape
+            except NameError:
+                baseline = load_image(images[0])
             registrator = Registrator(windows, baseline)
 
         output = process_images(images, registrator)

@@ -83,7 +83,7 @@ class Registrator(object):
         registered.
 
     """
-    def __init__(self, windows, base_image, pad=400):
+    def __init__(self, windows, base_image, pad=200):
         self.windows = windows
         self.pad = pad
         self.templates = extract_patches(base_image, windows)
