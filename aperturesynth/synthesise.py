@@ -36,21 +36,43 @@ def load_image(image):
     return img_as_float(io.imread(image)).astype('float32')
 
 
-def process_images(image_list, windows, no_transform=False):
+def register_images(image_list, registrator):
+    """A generator to register a series of images.
+
+    The first image is taken as the baseline and is not transformed.
+
+    """
+    yield load_image(image_list[0])
+
+    for image_file in image_list[1:]:
+        transformed_image, transform = registrator(load_image(image_file))
+        # Stub for future operations that examine the transformation
+        yield transformed_image
+
+
+def no_transform(image):
+    """Pass through the original image without transformation.
+
+    Returns a tuple with None to maintain compatability with processes that
+    evaluate the transform.
+
+    """
+    return (image, None)
+
+
+def process_images(image_list, registrator, fusion=None):
     """Apply the given transformation to each listed image and find the mean.
 
     Parameters
     ----------
 
     image_list: list of filepaths
-        Locations of images to be loaded and transformed.
-    windows:
-    n_jobs: int (default 1)
-        Number of worker processes to use in parallel.
-    no_transform: bool (default False)
-        If true, combine images without registering them first. The windows
-        and n_jobs variables will be ignored. Useful for visualising the impact
-        of the registration process.
+        Image files to be loaded and transformed.
+    registrator: callable
+        Returns the desired transformation of a given image.
+    fusion: callable (optional, default=None)
+        Returns the fusion of the given images. If not specified the images are
+        combined by averaging.
 
     Returns
     -------
@@ -59,21 +81,16 @@ def process_images(image_list, windows, no_transform=False):
         The combined image as an ndarray.
 
     """
-    if no_transform:
-        baseline = load_image(image_list[0])
-        for image in image_list[1:]:
-            baseline += load_image(image)
+
+    registered = register_images(image_list, registrator)
+
+    if fusion is not None: # Stub for future alternative fusion methods
+        return fusion(registered)
+
     else:
-        # Set up the object to perform the image registration
-        baseline = load_image(image_list[0])
-        registrator = Registrator(windows, baseline, pad=400)
-
-        for image in image_list[1:]:
-            image = load_image(image)
-            baseline += registrator(image)[0]
-
-    baseline /= len(image_list)
-    return baseline
+        output = sum(registered)
+        output /= len(image_list)
+        return output
 
 
 def main():
@@ -89,10 +106,11 @@ def main():
         output_file = os.path.join(head, 'transformed_' + tail + '.tiff')
 
     if args['--no-transform']:
-        windows = []
-        output = process_images(images, windows, no_transform=True)
-        save_image(output, output_file)
+        registrator = no_transform
     else:
-        windows = get_windows(load_image(images[0]))
-        output = process_images(images, windows)
-        save_image(output, output_file)
+        baseline = load_image(images[0])
+        windows = get_windows(baseline)
+        registrator = Registrator(windows, baseline)
+
+    output = process_images(images, registrator)
+    save_image(output, output_file)
