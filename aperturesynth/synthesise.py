@@ -119,8 +119,8 @@ def main():
     elif args['combine']:
         images = args['<images>']
 
-        # Is a file specified, or do I need to generate my own?
-        if args['--out'] is not None:
+        # Is an output filename specified, or do I need to generate my own?
+        if args['--out']:
             output_file = args['--out']
         else:
             head, ext = os.path.splitext(images[0])
@@ -128,7 +128,9 @@ def main():
             output_file = os.path.join(head, 'transformed_' + tail + '.tiff')
 
         # Are the windows specified, or do I have to provide a gui to choose?
-        if args['--windows'] is not None:
+        if args['--no-transform']:
+            pass # No windows are needed for the averaging case
+        elif args['--windows']:
             windows = np.genfromtxt(args['--windows'])
         else:
             baseline = load_image(images[0])
@@ -138,7 +140,7 @@ def main():
         if args['--no-transform']:
             registrator = no_transform
         else:
-            try:
+            try: # Only load the baseline if not loaded earlier.
                 baseline.shape
             except NameError:
                 baseline = load_image(images[0])
