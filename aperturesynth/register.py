@@ -52,6 +52,7 @@ def extract_patches(image, windows, pad=0):
     coords = []
     max_rows, max_cols = image.shape[:2]
     n_windows = int(windows.shape[0] / 2)
+
     for i in range(n_windows):
         rows = windows[i*2:(i*2 + 2), 0] + [-pad, pad]
         cols = windows[i*2:(i*2 + 2), 1] + [-pad, pad]
@@ -62,6 +63,7 @@ def extract_patches(image, windows, pad=0):
         this_patch = image[rows[0]:rows[1], cols[0]:cols[1]]
         patches.append(rgb2gray(this_patch))
         coords.append(np.vstack((rows, cols)).T)
+
     if pad > 0:
         return patches, np.vstack(coords)
     else:
@@ -88,6 +90,15 @@ class Registrator(object):
         self.pad = pad
         self.templates = extract_patches(base_image, windows)
 
+        # Determine suitable transform from the number of points
+        n_points = len(self.templates)
+
+        n_points = min(n_points, 4) # uses projective transformation for >= 4 points
+
+        tform_types = ['translate', 'similarity', 'affine', 'projective']
+        self.tform_type = tform_types[n_points - 1]
+
+
     def match(self, image):
         """Matches an image to the baseline image.
 
@@ -108,20 +119,27 @@ class Registrator(object):
         search_windows, search_coords = extract_patches(image,
                                                         self.windows,
                                                         pad=self.pad)
+
         shifts = []
+
         for window, template in zip(search_windows, self.templates):
             shifts.append(find_max_correlation(window, template))
+
         shifts = np.vstack(shifts)
+
         # Convert coordinates from padded windows to absolute position
         delta = search_coords[::2, [1, 0]] - self.windows[::2, [1, 0]]
         points1 = self.windows[::2, [1, 0]]
         points2 = points1 - shifts - delta
 
-        match_tform = transform.estimate_transform('affine',
-                                                   points2,
-                                                   points1)
-        return (transform.warp(image, match_tform).astype('float32'),
-                match_tform)
+        if self.tform_type == 'translate':
+            x, y = (-shifts - delta).ravel()
+            match_tform = transform.SimilarityTransform(translation=(-x, -y))
+        else:
+            match_tform = transform.estimate_transform(self.tform_type,
+                                                       points2,
+                                                       points1)
+        return (transform.warp(image, match_tform), match_tform)
 
     def __call__(self, image):
         return self.match(image)

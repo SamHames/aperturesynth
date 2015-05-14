@@ -47,7 +47,7 @@ def save_image(image, filename):
 
 def load_image(image):
     """Loads the given file and converts to float32 format. """
-    return img_as_float(io.imread(image)).astype('float32')
+    return img_as_float(io.imread(image))
 
 
 def register_images(image_list, registrator):
