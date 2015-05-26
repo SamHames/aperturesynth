@@ -34,7 +34,7 @@ This software is written in Python, and currently requires a working Python impl
 
     pip install aperturesynth
 
-Alternatively you can install from source. First clone the project from the website using fossil [](https://hames.id.au/software/aperturesynth), then run the setup.py in the root directory to install the file.
+Alternatively you can install from source. First clone the project from [the website](https://hames.id.au/software/aperturesynth) using fossil , then run the setup.py in the root directory to install the file.
 
     fossil clone https://hames.id.au/software/aperturesynth aperturesynth.fossil
     mkdir aperturesynth; cd aperturesynth
