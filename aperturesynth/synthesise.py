@@ -24,8 +24,14 @@ Options:
     --no-transform      Combine images without transforming first. Useful for
                         visualising the impact of registration.
 
-The first image passed in will be the baseline image to which all following
-images will be matched.
+The combine command is the main interface for synthesising images: it can be
+called with just the images as arguments and will present a GUI to select the
+focal regions. The first image passed in will be the baseline image to which 
+all following images will be matched. 
+
+When selecting focal regions using choose_windows or combine with no windows
+file specified, consecutive pairs of points *must* indicate the top left and 
+bottom right of the rectangular focal regions.
 
 """
 
