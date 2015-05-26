@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='aperturesynth',
-    version='0.0.1',
+    version='0.0.2',
 
     packages=['aperturesynth'],
 
@@ -11,8 +11,8 @@ setup(
     description='A tool for registering and combining series of handheld photographs',
 
     author='Sam Hames',
-    author_email='samuel.hames@uqconnect.edu.au',
-    url='https://github.com/SamHames/aperturesynth',
+    author_email='sam@hames.id.au',
+    url='https://hames.id.au/software/aperturesynth',
 
     install_requires=['scikit-image',
                     'matplotlib',
